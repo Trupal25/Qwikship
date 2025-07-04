@@ -23,7 +23,7 @@ export const appRouter = createTRPCRouter({
     //     text:z.string()
     //   })
     // ).query((q)=>{
-    //   q
+    //   
     // })
 });
 // export type definition of API
