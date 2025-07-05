@@ -6,7 +6,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 export const Client = () =>{
 
     const trpc = useTRPC();
-    const { data } = useSuspenseQuery(trpc.crateAi.queryOptions({text:"trupal"}))
+    const { data } = useSuspenseQuery(trpc.messages.queryOptions({text:"trupal"}))
 
     return <div>
         { JSON.stringify(data)}
