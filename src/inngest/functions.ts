@@ -23,15 +23,20 @@ export const codeAgentFunction = inngest.createFunction(
       return sandbox.sandboxId;
     })
     
+    // model: openai({
+        // model : "gpt-4o-mini",
+        //  defaultParameters: {
+            // temperature:0.4,
+        // },
     
     const codeAgent = createAgent<AgentState>({
       name:"code-agent",
       system: PROMPT,
       model: gemini({
-        model : "gemini-2.0-flash",
+        model : "gemini-1.5-flash",
          defaultParameters: {
           generationConfig:{
-            temperature:0.1,
+            temperature:0.4,
           }
         },
         apiKey: process.env.GEMINI_API_KEY
@@ -51,6 +56,7 @@ createTool({
   }),
   handler: async ({ files }, { step, network }:Tool.Options<AgentState>) => {
     const newFiles = await step?.run("createOrUpdateFiles",async ()=>{
+      await step.sleep("rate-limit-delay", "3.5s")
     try {
       const updatedFiles = network.state.data.files || {};
       const sandbox = await getSandbox(sandboxId);
@@ -80,6 +86,7 @@ createTool({
     files: z.array(z.string()),
   }),
   handler: async ({ files },{step}) => {
+    await step?.sleep("rate-limit-delay", "3.5s")
     return await step?.run("readFiles", async() =>{
 
     
@@ -107,6 +114,7 @@ createTool({
     command: z.string(),
   }),
   handler: async ({ command }) => {
+    await step.sleep("rate-limit-delay", "3.5s")
     const buffers = { stdout: "", stderr: "" };
     try {
       const sandbox = await getSandbox(sandboxId);
@@ -152,8 +160,10 @@ createTool({
     const network = createNetwork<AgentState>({
       name: "coding-agent-network",
       agents: [codeAgent],
-      maxIter: 15,
+      maxIter: 8,
       router: async ( { network })=>{
+
+        await new Promise((resolve) => setTimeout(resolve,4000))
         const summary = network.state.data.summary;
 
         if(summary){
@@ -174,8 +184,10 @@ createTool({
 
     await step.run("save-result", async ()=>{
       if (isError) {
+        console.log(result.state.data +"files: " +result.state.data.files)
         return await prisma.message.create({
           data:{
+            projectId: event.data.projectId,
             content: "Something went Wrong. Please try again",
             role:"ASSISTANT",
             type:"ERROR"
@@ -185,6 +197,7 @@ createTool({
 
       return await prisma.message.create({
         data:{
+          projectId: event.data.projectId,
           content: result.state.data.summary,
           role:"ASSISTANT",
           type:"RESULT",
